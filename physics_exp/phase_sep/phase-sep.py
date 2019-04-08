@@ -83,7 +83,7 @@ def heaviside(x):
         return Constant(0.5)'''
     return 0.5*(x+abs(x)) / abs(x)
 
-ai = 0.
+ai = 0.3
 wi = 4.
 gamma = 1 - sum(ai**wi * heaviside(dot(nv, mi)) for mi in m)
 eps = 0.01
@@ -109,7 +109,7 @@ solver.parameters["convergence_criterion"] = "incremental"
 solver.parameters["relative_tolerance"] = 1e-6
 
 
-file = File("result/ps-1/output.pvd", "compressed")
+file = File("result/ps-0/output.pvd", "compressed")
 
 # Step in time
 t = 0.0

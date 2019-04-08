@@ -316,7 +316,7 @@ solver.parameters["relative_tolerance"] = 1e-6
 # a terminal time :math:`T` is reached::
 
 # Output file
-file = File("result/output.pvd", "compressed")
+file = File("result/fenics/output.pvd", "compressed")
 
 # Step in time
 t = 0.0

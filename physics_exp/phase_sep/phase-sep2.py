@@ -2,6 +2,9 @@
 
 import random
 from dolfin import *
+import numpy as np
+
+eps = 0.005
 
 
 class InitialConditions(UserExpression):
@@ -9,7 +12,8 @@ class InitialConditions(UserExpression):
         random.seed(2 + MPI.rank(MPI.comm_world))
         super().__init__(**kwargs)
     def eval(self, values, x):
-        values[0] = 0.63 + 0.02*(0.5 - random.random())
+        values[0] = 0.5 + 0.1*(0.5 - random.random())
+        #values[0] = 0.5*(1. - np.tanh((sqrt((x[0]-0.5)**2+(x[1]-0.5)**2)-0.25)/(.1)))
         values[1] = 0.0
     def value_shape(self):
         return (2,)
@@ -63,11 +67,6 @@ e1 = Constant((1.,0))
 e2 = Constant((0,1.))
 m = [e1, -e1, e2, -e2]
 
-
-c = variable(c)
-f    = 0.25*c**2*(1-c)**2
-dfdc = diff(f, c)
-
 c_grad = grad(c)
 abs_grad = abs(c_grad[0]) + abs(c_grad[1])
 #abs_grad = abs(grad(c))
@@ -81,21 +80,20 @@ def heaviside(x):
         return Constant(1.)
     else:
         return Constant(0.5)'''
-    return 0.5*(x+abs(x)) / abs(x)
+    return 0.5*(x+abs(x)) / abs(x) if conditional(gt(DOLFIN_EPS, abs(x)), True, False) else 0.5
 
-ai = 0.
+ai = 0.5
 wi = 4.
 gamma = 1 - sum(ai**wi * heaviside(dot(nv, mi)) for mi in m)
-eps = 0.01
 
-
-multiplier = sqrt(Constant(0.25)*c**2*(Constant(1) - c)**2)
+b_energy = Constant(0.25)*c**2*(Constant(1) - c)**2
+multiplier = sqrt(b_energy)
 L0 = c*q*dx - c0*q*dx +  multiplier * dt*dot(grad(mu), grad(q))*dx
 #L1 = mu*v*dx - dfdc*v*dx - lmbda*dot(grad(c), grad(v))*dx
-w = gamma * (eps*0.5*dot(grad(c), grad(c)) + 1./eps * f) * dx
+w = gamma * (eps*0.5*dot(grad(c), grad(c)) + 1./eps * b_energy) * dx
 print(w)
 #1./eps * f
-F = derivative(w, c)
+F = derivative(w, c, v)
 L1 = mu*v*dx - F
 
 L = L0 + L1
@@ -109,13 +107,15 @@ solver = NewtonSolver()
 solver.parameters["linear_solver"] = "lu"
 solver.parameters["convergence_criterion"] = "incremental"
 solver.parameters["relative_tolerance"] = 1e-6
+#solver.parameters['relaxation_parameter'] = .99
+solver.parameters['maximum_iterations'] = 100
 
 
 file = File("result/ps-1/output.pvd", "compressed")
 
 # Step in time
 t = 0.0
-T = 50*dt
+T = 100*dt
 while (t < T):
     t += dt
     u0.vector()[:] = u.vector()
